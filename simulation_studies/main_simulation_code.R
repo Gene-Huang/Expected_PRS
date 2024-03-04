@@ -1,0 +1,182 @@
+###############################################
+## Expected PRS (ePRS)
+## simulation studies
+###############################################
+## data generating models: 12 scenarios 
+## 2 observed PRSs (homogeneous weighting PRS and heterogeneous weighting PRS) 
+## 6 unknown confoundings (conf-PRS1, conf-PRS2, single variant, two variants, conf-pc*, none)
+###############################################
+## association models: 7 models
+## 1. global rPRS + global ePRS
+## 2. local rPRS + local ePRS
+## 3. PRS + conf-pc*, 
+## 4. PRS + global ancestry proportion
+## 5. PRS + 10PCs
+## 6. PRS + 20PCs
+## 7. PRS
+###############################################
+## load R packages
+library(tidyr)
+library(data.table)
+###############################################
+###############################################
+## number of variants considered in simulation
+p <- 100
+
+## number of sample size considered in simulation
+n <- 10000
+###############################################
+###############################################
+## load R function
+###############################################
+## the R function to generate observed PRS and confounders
+source("generate_simulation_components.R")
+
+## the R function to generate outcomes (based on different data-generating models)
+source("generate_simulation_outcomes.R")
+
+## the R function to estimate PRS-outcome association effect size (based on different association models)
+source("estimate_prs_associations.R")
+
+## the R function to compute global ePRS and global rPRS
+source("generate_global_EPRS_rPRS.R")
+
+## the R function to compute local ePRS and global rPRS
+source("generate_local_EPRS_rPRS.R")
+
+
+###############################################
+## use GWAS summary statistics and ancestry-specific allele frequency to generate genetic data
+###############################################
+## 1. for the simulated PRS (observed PRS)
+## we chose the top 100 SNPs from UKBB+ICBP SBP (only individuals of European ancestries) GWAS
+###############################################
+file_to_generate_PRS <- "Top100_SNPs_from_UKB+ICBP_SBP_gwas_for_PRS.txt"
+
+generate_PRS <- read.table(file_to_generate_PRS, header = T)
+
+head(generate_PRS)
+
+###############################################
+## 2. for the simulated conf-pc*
+## we selected SNPs at random from an MVP SBP (multi-ethnic) GWAS
+###############################################
+file_to_generate_conf_pc <- "Random_SNPs_from_MVP_SBP_GWAS_for_simulating_PC.txt"
+
+generate_conf_pc <- read.table(file_to_generate_conf_pc, header = T)
+
+head(generate_conf_pc)
+
+###############################################
+## 3. for the simulated "ancestral confounder" (conf-PRS2, single variant, two variants), 
+## we selected SNPs from the MVP SBP GWAS, that where relatively more frequent in African ancestry
+###############################################
+file_to_generate_unknow_conf <- "SNPs_from_MVP_SBP_GWAS_for_AA_enriched_PRS.txt"
+
+generate_ancestral_conf <- read.table(file_to_generate_unknow_conf, header = T)
+
+head(generate_ancestral_conf)
+
+###############################################
+## for generating observed PRS
+## use summary statistics from UKBB/ICBP GWAS as weight
+## 1. homogeneous weighting PRS setting
+################################################
+
+betas_for_homogeneous_weight_prs <- generate_PRS$BETA
+
+################################################
+## 2. heterogeneous weighting PRS setting
+## select 10 SNPs with highest allele freq in AA, and set the weighting as 1.5
+## select 10 SNPs with highest allele freq in American, and set the weighting as 2
+################################################
+betas_for_heterogeneous_weight_prs <- cbind(betas_for_homogeneous_weight_prs,
+                                            betas_for_homogeneous_weight_prs,
+                                            betas_for_homogeneous_weight_prs)
+
+colnames(betas_for_heterogeneous_weight_prs) <- c("a1", "a2", "a3")
+
+## select 10 SNPs with highest allele freq in AA, and set the weighting as 1.5
+betas_for_heterogeneous_weight_prs[order(generate_PRS$Africa_est, decreasing = T)[1:10], "a2"] <- 1.5
+
+## select 10 SNPs with highest allele freq in American, and set the weighting as 2
+betas_for_heterogeneous_weight_prs[order(generate_PRS$Amer_est, decreasing = T)[1:10], "a3"] <- 2
+
+
+################################################
+## start simulating data
+################################################
+## step1: generate observed PRS and unknown confoundings
+## use "simulate_component_data()" function
+################################################
+dat <- simulate_component_data(n, 
+                               admixture_pattern = "realistic_admixture",
+                               ancestral_eaf_for_prs_file = file_to_generate_PRS, 
+                               ancestral_eaf_for_conf_pc_file = file_to_generate_conf_pc,
+                               ancestral_eaf_for_ancestral_confounder_file = file_to_generate_unknow_conf,
+                               betas_vec_for_standard_prs = betas_for_homogeneous_weight_prs,
+                               betas_mat_for_prs_ancestry_effects = betas_for_heterogeneous_weight_prs)
+
+
+################################################
+## step2: generate outcomes by the data generating models
+## use "simulate_outcomes_few_scenarios()" function
+## set "true PRS-outcome association effect size" = 1.5
+## set "unknown confounding effect size" = 0.5
+################################################
+simulated_outcomes <- simulate_outcomes_few_scenarios(dat, True_Beta = 1.5, ancestry_var_eff = 0.5)
+
+
+################################################
+## step3: generate ePRS by global and local ancestries
+## use "generate_global_EPRS_rPRS()" and "generate_local_EPRS_rPRS()" functions
+## note: to compute rPRS, the input is always homogeneous weighting PRS
+## no matter the "true simulation" setting is homogeneous or heterogeneous weighting PRS
+################################################
+global_ePRS <- generate_global_EPRS_rPRS(dat$standard_prs,
+                                         dat$prs_eafs,
+                                         betas_for_homogeneous_weight_prs,
+                                         dat$global_ancestries)
+
+local_ePRS <-  generate_local_EPRS_rPRS(dat$standard_prs,
+                                        dat$prs_eafs,
+                                        betas_for_homogeneous_weight_prs,
+                                        local_anc_counts = dat$local_anc_counts)
+
+
+################################################
+## step4: estimate the "PRS-outcome" association
+## use "estimate_prs_associations()" function
+## note: the input of PRS in each association model is always homogeneous weighting PRS
+## no matter the "true simulation" setting is homogeneous or heterogeneous weighting PRS
+################################################
+res <- estimate_prs_associations(prs = dat$standard_prs,
+                                 outcomes = simulated_outcomes,
+                                 conf_pc = dat$conf_pc,
+                                 Data.PC10 = dat$Data.PC10,
+                                 Data.PC20 = dat$Data.PC20,
+                                 proportions_ancestry = dat$global_ancestries,
+                                 gePRS = global_ePRS$gEPRS,
+                                 lePRS = local_ePRS$lEPRS)
+
+
+################################################
+## summarize the estimation performance
+################################################
+res <- data.table(res)
+
+True_Beta <- 1.5
+
+## output summary measurement 
+## MAE and MSE of the estimated effect size
+sum_res <- res[, .(MAE = mean(abs(beta-True_Beta)),
+                   MSE = mean((beta-True_Beta)^2)),
+               by = c("true_confounder", "true_prs", "model_adjustment")]
+
+## look at the results
+sum_res
+
+
+
+
+

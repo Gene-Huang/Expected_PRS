@@ -1,0 +1,115 @@
+#################################################
+## example for generating genetic dataset (allele count) by using local ancestry pattern
+## here we will illustrate how to simulate genetic data (allele count) based on 
+## individual's local ancestry pattern (with ancestry-specific allele frequency)
+## this code matches to the process we shown in main manuscript Figure2 (step1 to step3)
+#################################################
+#################################################
+## load in the R function
+#################################################
+source("simulate_global_ancestry_pattern.R")
+source("sample_local_ancestries.R")
+source("sample_local_alleles.R")
+source("allele_counts_across_copies.R")
+#################################################
+#################################################
+## number of individuals
+## in this example, we assume there are 10 individuals
+#################################################
+n <- 10
+
+## number of variants
+## in this example, we assume there are 5 variants
+p <- 5
+#################################################
+#################################################
+## step1: generate global ancestry proportion for each individual
+## here we use the 3-way admixed pattern for example
+#################################################
+## set seed (just for replication purposes)
+set.seed(20240229)
+
+## specify the admixture pattern
+## here we specify "realistic_admixture" option
+## in which usually the a1 (say European population) have the highest proportion on average.
+## Other patterns are implemented to make various comparisons 
+## check "simulate_global_ancestry_pattern.R" for more details
+admixture_pattern <- "realistic_admixture"
+
+## use "simulate_global_ancestry_pattern()" function to generate global ancestry proportion
+admixed_prop <- simulate_global_ancestry_pattern(n, admixture_pattern)
+
+## look at the data
+## the output is a n by 3 matrix
+## raw represents individual (10 individuals in this example)
+## column represents the global ancestry proportion of each ancestry (3 ancestries in this example)
+## for example: individual 1 has 8% of their genome from ancestry a1, 28% from a2, 64% from a3
+head(admixed_prop)
+
+#################################################
+## step2: generate local ancestry pattern (according to the global ancestry proportion generated from step1)
+#################################################
+## generate local ancestry pattern
+## use "sample_local_ancestries()" function
+local_ancestry_pattern <- sample_local_ancestries(admixed_prop, p)
+
+## look at the data
+## the output is a list (contains two objects)
+## the first object (copy_1) is the local ancestry of each variant of copy1 (n by p)
+## the second object (copy_2) is the local ancestry of each variant of copy2 (n by p)
+## for example: for the first individual
+## the first variant: copy 1 was inherited from a3 ancestry, copy 2 was inherited from a2 ancestry
+head(local_ancestry_pattern)
+
+#################################################
+## step3: generate allele count (according to the local ancestry pattern generated from step2 with ancestry-specific allele frequency)
+#################################################
+## read in the ancestry-specific allele freq data
+## here we use the top 100 (smallest p-value) SNPs from UKBB + ICBP SBP GWAS as example
+## the ancestry-specific allele frequency was computed by TOPMed individuals
+#################################################
+ancestry_specific_AF <- read.table("Top100_SNPs_from_UKB+ICBP_SBP_gwas_for_PRS.txt", header = TRUE)
+
+## select three ancestries: European, African, native American
+ancestry_specific_AF <- ancestry_specific_AF[,c("Europe_est", "Africa_est", "Amer_est")]
+
+colnames(ancestry_specific_AF) <- c("a1", "a2", "a3")
+
+## select the first 5 variants for illustrating purposes
+## row represents variants
+## column represents the ancestry-specific allele frequency
+## for example: for the first variant
+## the allele frequency of Europe ancestry is 0.3012
+## the allele frequency of African ancestry is 0.0393
+## the allele frequency of native American ancestry is 0.2943
+ancestry_specific_AF <- ancestry_specific_AF[1:p, ]
+
+head(ancestry_specific_AF)
+
+
+## use "sample_local_alleles()" function to generate the allele count for each individual, each variant across two copies
+alleles_by_copy <- sample_local_alleles(local_ancestry_pattern, ancestry_specific_AF)
+
+## look at the data
+## the output is a list (contains two objects)
+## the first object (copy_1) is the allele count of copy1 (n by p)
+## the second object (copy_2) is the allele count of copy2 (n by p)
+## for example: for the first individual, and for the first variant
+## the allele count of copy1 is 0, the allele count of copy2 is also 0
+head(alleles_by_copy)
+
+## compute the final allele count for each individual
+## sum up the allele count of copy1 and copy2
+## use "allele_counts_across_copies()" function
+allele_counts <- allele_counts_across_copies(alleles_by_copy)
+
+## look at the data
+## the output is a n by p matrix
+## row represents individual (10 individuals in this example)
+## column represents variant (5 variants in this example)
+head(allele_counts)
+
+
+
+
+
