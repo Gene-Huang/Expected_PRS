@@ -1,4 +1,4 @@
-# Expected_PRS
+# The expected polygenic risk score (ePRS) framework
 
 Here is the R codes for implementing our work on "The expected polygenic risk score (ePRS) framework: an equitable metric for quantifying polygenetic risk via modeling of ancestral makeup" 
 (check out our preprint on medRxiv: https://medrxiv.org/cgi/content/short/2024.03.05.24303738v1)
