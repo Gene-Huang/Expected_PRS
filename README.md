@@ -1,6 +1,6 @@
 # The expected polygenic risk score (ePRS) framework
 
-Here is the R codes for implementing our work on "The expected polygenic risk score (ePRS) framework: an equitable metric for quantifying polygenetic risk via modeling of ancestral makeup" 
+Here is the R code for implementing our work on "The expected polygenic risk score (ePRS) framework: an equitable metric for quantifying polygenetic risk via modeling of ancestral makeup" manuscript.
 (check out our preprint on medRxiv: https://medrxiv.org/cgi/content/short/2024.03.05.24303738v1)
 
 There are three folders that contain all the primary code for the illustration purposes. (1) “compute_global_ePRS” folder contains the code and functions for computing ePRS; (2) “simulate_local_ancsestry_genetic_data” folder contains the code for generating local ancestry patterns and allele counts data for admixed populations; (3) “simulation_studies” folder contains the code for primary simulation studies. 
