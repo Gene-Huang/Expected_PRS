@@ -7,7 +7,7 @@ There are three folders that contain all the primary code for the illustration p
 
 [compute_global_ePRS folder] The main R function for computing ePRS is in “compute_global_ePRS.R”. “example.R” provides an example for computing global ePRS (using three .csv example files). More detailed descriptions of the functions are summarized in README.docx file.
 
-[simulate_local_ancsestry_genetic_data folder] The “example.R” provides an example for generating global ancestry proportions, local ancestry patterns, and allele counts for individuals of admixed population. 
+[simulate_local_ancestry_genetic_data folder] The “example.R” provides an example for generating global ancestry proportions, local ancestry patterns, and allele counts for individuals of admixed population. 
 
 [simulation_studies folder] The main R function for simulation studies is in “main_simulation_code.R”. In this code, we provide an example for simulating PRSs, simulating unknow confoundings, and conducting PRS-outcome association analyses. More detailed descriptions of the functions are summarized in README.docx file.
 
